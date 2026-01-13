@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shopping App UI</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding-bottom: 70px;
+    background: #f2f2f2;
+}
+
+.page {
+    display: none;
+    padding: 15px;
+}
+
+.page.active {
+    display: block;
+}
+
+.card {
+    background: #fff;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+button {
+    padding: 8px;
+    border: none;
+    border-radius: 5px;
+    background: #007bff;
+    color: white;
+    width: 100%;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+textarea, select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    background: #ffffff;
+    border-top: 1px solid #ccc;
+}
+
+.bottom-nav button {
+    flex: 1;
+    background: none;
+    color: #333;
+}
+
+.bottom-nav button.active {
+    background: #007bff;
+    color: white;
+}
+</style>
+</head>
+
+<body>
+
+<!-- PRODUCT LIST -->
+<div id="products" class="page active">
+    <h2>🛒 Product Listing</h2>
+    <div id="productList"></div>
+</div>
+
+<!-- CART -->
+<div id="cart" class="page">
+    <h2>🧺 Cart</h2>
+    <div id="cartItems"></div>
+</div>
+
+<!-- PLACE ORDER -->
+<div id="order" class="page">
+    <h2>📦 Place Order</h2>
+
+    <!-- INPUT -->
+    <div id="orderInput" class="card">
+        <label>Address</label>
+        <textarea id="address" placeholder="Enter delivery address"></textarea>
+
+        <label>Payment Option</label>
+        <select id="payment">
+            <option value="">Select Payment</option>
+            <option>Cash on Delivery</option>
+            <option>GCash</option>
+            <option>Credit Card</option>
+        </select>
+
+        <button onclick="confirmOrder()">Finish Order</button>
+    </div>
+
+    <!-- ALL ORDERS DISPLAY -->
+    <div id="orderHistory">
+        <!-- Past orders will be appended here -->
+    </div>
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav">
+    <button class="active" onclick="showPage('products', this)">Products</button>
+    <button onclick="showPage('cart', this)">Cart</button>
+    <button onclick="showPage('order', this)">Place Order</button>
+</div>
+
+<script>
+/* PRODUCTS */
+let products = [
+    {name:"Rice", price:250, stock:10, desc:"Premium 5kg rice, perfect for daily meals."},
+    {name:"Sugar", price:70, stock:10, desc:"White sugar 1kg, ideal for cooking and drinks."},
+    {name:"Cooking Oil", price:180, stock:8, desc:"Vegetable oil, suitable for frying and sautéing."},
+    {name:"Coffee", price:120, stock:12, desc:"Instant coffee, rich aroma and taste."},
+    {name:"Milk", price:90, stock:15, desc:"Fresh milk 1L, nutritious and healthy."}
+];
+
+let cart = [];
+let orders = []; // store all past orders
+
+/* PAGE SWITCH */
+function showPage(page, btn) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(page).classList.add('active');
+
+    document.querySelectorAll('.bottom-nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    if (page === 'cart') renderCart();
+    if (page === 'products') renderProducts();
+}
+
+/* RENDER PRODUCTS */
+function renderProducts() {
+    let html = "";
+    products.forEach((p, index) => {
+        html += `
+        <div class="card">
+            <b>${p.name}</b><br>
+            <small>${p.desc}</small><br>
+            Price: ₱${p.price}<br>
+            Stock: ${p.stock}<br>
+            <button onclick="addToCart(${index})" ${p.stock === 0 ? "disabled" : ""}>
+                Add to Cart
+            </button>
+        </div>`;
+    });
+    document.getElementById("productList").innerHTML = html;
+}
+
+/* ADD TO CART */
+function addToCart(index) {
+    if (products[index].stock > 0) {
+        cart.push(index);
+        alert(products[index].name + " added to cart");
+    }
+}
+
+/* CART */
+function renderCart() {
+    let html = "";
+    cart.forEach(i => {
+        html += `<div class="card">${products[i].name} - ₱${products[i].price}</div>`;
+    });
+    document.getElementById("cartItems").innerHTML = html || "Cart is empty";
+}
+
+/* PLACE ORDER */
+function confirmOrder() {
+    let address = document.getElementById("address").value;
+    let payment = document.getElementById("payment").value;
+
+    if (!address || !payment || cart.length === 0) {
+        alert("Complete details and add items to cart");
+        return;
+    }
+
+    // Reduce stock
+    cart.forEach(i => products[i].stock--);
+
+    // Prepare order object
+    let orderItems = cart.map(i => ({name: products[i].name, price: products[i].price}));
+    let total = orderItems.reduce((sum, item) => sum + item.price, 0);
+
+    let order = {
+        address: address,
+        payment: payment,
+        items: orderItems,
+        total: total
+    };
+
+    // Save order
+    orders.push(order);
+
+    // Render all past orders
+    renderOrders();
+
+    // Clear cart and input
+    cart = [];
+    document.getElementById("address").value = "";
+    document.getElementById("payment").value = "";
+
+    renderProducts();
+}
+
+/* RENDER ALL ORDERS */
+function renderOrders() {
+    let html = "";
+    orders.forEach((o, idx) => {
+        html += `
+        <div class="card">
+            <h4>Order #${idx+1}</h4>
+            <p><b>Address:</b> ${o.address}</p>
+            <p><b>Payment:</b> ${o.payment}</p>
+            <p><b>Items:</b></p>
+            <ul>
+                ${o.items.map(item => `<li>${item.name} - ₱${item.price}</li>`).join("")}
+            </ul>
+            <p><b>Total Price:</b> ₱${o.total}</p>
+        </div>`;
+    });
+    document.getElementById("orderHistory").innerHTML = html;
+}
+
+renderProducts();
+</script>
+
+</body>
+</html>
